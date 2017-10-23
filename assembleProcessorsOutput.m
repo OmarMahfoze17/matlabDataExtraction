@@ -10,8 +10,8 @@ ny=129;
 nz=84;
 %--------------------------------------------
 %========== Saving Box Size =================
-nxB1=33;
-nxB2=96;
+nxB1=1;
+nxB2=128;
 nyB1=1;
 nyB2=129;
 nzB1=1;
@@ -41,51 +41,86 @@ end
 %                 nzProcSize(i,j)*i>=nzB1 && nzProcSize(i,j)*(i-1)+1<=nzB2)
 %             test(i,j)=1;
 % %             corners
-%         else 
+%         else
 %             test(i,j)=0;
 %         end
-%         [i j test(i,j)]        
-%             
+%         [i j test(i,j)]
+%
 %     end
 % end
-
+IDP=0;
 for i=1:noProcsZ
     for j=1:noProcsY
+        IDP=IDP+1
+        ProcID(i,j)=IDP;
+        
         if (nyProcSize(i,j)*j>=nyB1 && (nyProcSize(i,j)*(j-1)+1)<=nyB1 &&...
                 nzProcSize(i,j)*i>=nzB1 && nzProcSize(i,j)*(i-1)+1<=nzB1)
-            C1=[i,j]
+            C1=[i,j]; % coordinates of the first Processor in the box
         end
         if (nyProcSize(i,j)*j>=nyB2 && (nyProcSize(i,j)*(j-1)+1)<=nyB2 &&...
                 nzProcSize(i,j)*i>=nzB2 && nzProcSize(i,j)*(i-1)+1<=nzB2)
-            C4=[i,j]
+            C4=[i,j]; % coordinates of the last Processor in the box
         end
-            
+        
     end
 end
+
+
 %--------------------------------------------
 totalNoPointsPassed=0;
 for time=1:1
     tic
-    ProcID=0;
     UX=zeros(nxBox,nyBox,nzBox);
     time
-    nypSum=nyProcSize(1);
-    for i=1:noProcsY
+    nypSum=0;
+    for j=C1(2):C4(2)
         nzpSum=0;
-        for j=1:noProcsZ
-            ProcID=ProcID+1;
-            id=num2str(100000+ProcID);
+        for i=C1(1):C4(1)
+            
+            id=num2str(100000+ProcID(j,i));
             ID=id(2:end);
             fileName=[path,'/',fileNameIntial,ID]
-            [nxProcSize(ProcID),nyProcSize(ProcID),nzProcSize(ProcID)]
-            noPoints=nxProcSize(ProcID)*nyProcSize(ProcID)*nzProcSize(ProcID);
-            ux=readBinay(fileName,nxProcSize(ProcID),nyProcSize(ProcID),nzProcSize(ProcID),...
+            %             [nxProcSize(i,j),nyProcSize(i,j),nzProcSize(i,j)]
+            if C1(1)==C4(1) 
+                % if one processor has the full rang
+                nzCommon=nzB2-nzB1+1;
+            elseif i==C1(1)
+                % this is the common points beteen the main grid and
+                % the processor points
+                nzCommon=(nzProcSize(i,j)*i-nzB1+1);
+                
+            elseif i==C4(1)
+                
+                nzCommon=(nzB2-nzProcSize(i-1,j)*(i-1)); 
+            else
+                nzCommon=nzProcSize(i,j);
+            end
+            if C1(2)==C4(2)
+                % if one processor has the full rang
+                nyCommon=nyB2-nyB1+1;
+                if (nypSum==0)
+                    nypSum=nyCommon;
+                end
+            elseif j==C1(2)
+                nyCommon=(nyProcSize(i,j)*j-nyB1+1);
+                if (nypSum==0)
+                    nypSum=nyCommon;
+                end
+            elseif j==C4(2)
+                nyCommon=(nyB2-nyProcSize(i,j-1)*(j-1));
+            else
+                nyCommon=nyProcSize(i,j);
+            end
+            noPoints=nxProcSize(i,j)*nyCommon*nzCommon;
+            ux=readBinay(fileName,nxProcSize(i,j),nyCommon,nzCommon,...
                 1,noPoints);
-            nzpSum=nzpSum+nzProcSize(ProcID);
-            UX(:,nypSum-nyProcSize(ProcID)+1:nypSum,nzpSum-nzProcSize(ProcID)+1:nzpSum)=ux;         
-            [ProcID,size(UX)]
+            nzpSum=nzpSum+nzCommon;
+            UX(:,nypSum-nyCommon+1:nypSum,nzpSum-nzCommon+1:nzpSum)=ux;
+            
+            [ProcID(i,j),size(UX)]
         end
-        nypSum=nypSum+nyProcSize(ProcID);
+        nypSum=nypSum+nyCommon;
     end
     toc
 end
