@@ -10,8 +10,8 @@ ny=129;
 nz=84;
 %--------------------------------------------
 %========== Saving Box Size =================
-nxB1=1;
-nxB2=128;
+nxB1=33;
+nxB2=96;
 nyB1=1;
 nyB2=129;
 nzB1=1;
@@ -24,12 +24,43 @@ nzBox=nzB2-nzB1+1;
 noProcsY=2;
 noProcsZ=2;
 totalNoProcs=noProcsY*noProcsZ;
-nxProcSize=ones(totalNoProcs,1)*nxBox;
-nyProcSize=ones(totalNoProcs,1)*floor(ny/noProcsY);
-nzProcSize=ones(totalNoProcs,1)*floor(nz/noProcsZ);
+nxProcSize=ones(noProcsZ,noProcsY)*nxBox;
+nyProcSize=ones(noProcsZ,noProcsY)*floor(ny/noProcsY);
+nzProcSize=ones(noProcsZ,noProcsY)*floor(nz/noProcsZ);
 if (mod(ny,noProcsY)~=0)
-    nyProcSize(end-noProcsZ+1:end)=...
-        nyProcSize(end-noProcsZ+1:end)+1;
+    nyProcSize(:,end)=...
+        nyProcSize(:,end)+1;
+end
+%--------------------------------------------
+%= Define the processor containing the Box =
+%------------ Processors Boundaries on the main grid
+% test=zeros(noProcsZ,noProcsY)
+% for i=1:noProcsZ
+%     for j=1:noProcsY
+%         if (nyProcSize(i,j)*j>=nyB1 && (nyProcSize(i,j)*(j-1)+1)<=nyB2 &&...
+%                 nzProcSize(i,j)*i>=nzB1 && nzProcSize(i,j)*(i-1)+1<=nzB2)
+%             test(i,j)=1;
+% %             corners
+%         else 
+%             test(i,j)=0;
+%         end
+%         [i j test(i,j)]        
+%             
+%     end
+% end
+
+for i=1:noProcsZ
+    for j=1:noProcsY
+        if (nyProcSize(i,j)*j>=nyB1 && (nyProcSize(i,j)*(j-1)+1)<=nyB1 &&...
+                nzProcSize(i,j)*i>=nzB1 && nzProcSize(i,j)*(i-1)+1<=nzB1)
+            C1=[i,j]
+        end
+        if (nyProcSize(i,j)*j>=nyB2 && (nyProcSize(i,j)*(j-1)+1)<=nyB2 &&...
+                nzProcSize(i,j)*i>=nzB2 && nzProcSize(i,j)*(i-1)+1<=nzB2)
+            C4=[i,j]
+        end
+            
+    end
 end
 %--------------------------------------------
 totalNoPointsPassed=0;
